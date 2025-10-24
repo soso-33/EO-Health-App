@@ -351,6 +351,31 @@ def create_birth_certificate_pdf(child_rec: dict, output_path: Path):
     img = create_birth_certificate_image(child_rec)
     img.save(output_path, "PDF", resolution=150)
     return output_path
+# ====================================================
+# 🧭 Sidebar Navigation
+# ====================================================
+
+st.sidebar.title("EoHealth Egypt Navigation")
+if "lang" not in st.session_state:
+    st.session_state.lang = "ar"
+
+lang_choice = st.sidebar.selectbox("Language / اللغة", ["ar", "en"], format_func=lambda x: "العربية" if x == "ar" else "English")
+st.session_state.lang = lang_choice
+
+# الصفحات المتاحة
+page = st.sidebar.radio(
+    "اختيار الصفحة / Choose Page",
+    [
+        "Home",
+        "Register Birth",
+        "Vaccination Tracker",
+        "Health Record",
+        "AI Insights",
+        "Eco Dashboard",
+        "Digital Card",
+        "Admin"
+    ]
+)
 
 # ====================================================
 # 🩺 Health Record Page
@@ -648,4 +673,5 @@ elif page == "Admin":
 
 # ------------- End of Application -------------
 st.success("🎉 Application loaded successfully — EoHealth Egypt Prototype Ready!")
+
 
