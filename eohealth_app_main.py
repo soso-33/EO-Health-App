@@ -1,8 +1,35 @@
+# =========================
+# 📌 EoHealth Egypt App (Fixed Version)
+# د. سها ناصر — الكارت الموحد للطفل
+# =========================
+
 import streamlit as st
 import pandas as pd
 import qrcode
 from io import BytesIO
+import sqlite3          # ✅ قاعدة البيانات
+from datetime import datetime, date
+from pathlib import Path
+import io, base64
+from PIL import Image, ImageDraw, ImageFont
+import arabic_reshaper
+from bidi.algorithm import get_display
 
+# ✅ إعداد المسارات العامة
+DB_PATH = "eohealth.db"                  # قاعدة البيانات المحلية
+UPLOAD_DIR = Path("uploads")             # مجلد حفظ الملفات
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+# ✅ دالة لاختيار خط آمن
+def choose_font(size=20):
+    try:
+        return ImageFont.truetype("Amiri-Regular.ttf", size)
+    except:
+        return ImageFont.load_default()
+
+# ----------------------------
+# واجهة المستخدم التجريبية
+# ----------------------------
 st.title("🧒 واجهة المستخدم - خدمات الكارت الموحد للطفل")
 
 # الخطوة 1: إدخال أو رفع QR Code
@@ -38,15 +65,15 @@ if qr_code:
 
     elif service == "حجز تطعيم":
         vaccine = st.selectbox("اختيار نوع التطعيم:", ["الدرن", "شلل الأطفال", "الثلاثي", "الكبد"])
-        date = st.date_input("تاريخ الموعد المطلوب")
+        date_pick = st.date_input("تاريخ الموعد المطلوب")
         if st.button("تأكيد الحجز"):
-            st.success(f"💉 تم حجز تطعيم ({vaccine}) بتاريخ {date}")
+            st.success(f"💉 تم حجز تطعيم ({vaccine}) بتاريخ {date_pick}")
 
     elif service == "حجز كشف طبي":
         dept = st.selectbox("اختيار العيادة:", ["الأطفال", "الأسنان", "الأنف والأذن", "باطنة"])
-        date = st.date_input("تاريخ الموعد")
+        date_pick = st.date_input("تاريخ الموعد")
         if st.button("تأكيد الحجز"):
-            st.success(f"🏥 تم حجز الكشف في عيادة {dept} بتاريخ {date}")
+            st.success(f"🏥 تم حجز الكشف في عيادة {dept} بتاريخ {date_pick}")
 
     elif service == "استخراج شهادة ميلاد":
         st.text_input("الرقم القومي لولي الأمر")
@@ -71,9 +98,11 @@ if qr_code:
 else:
     st.info("📷 برجاء إدخال أو مسح كود الكارت الذكي لبدء الخدمة.")
 
-# ------------- DB Utilities -------------
+# ====================================================
+# 🗃️ قاعدة البيانات والتوابع الخاصة بها
+# ====================================================
+
 def get_conn():
-    # Return a new connection (safer for concurrency in streamlit)
     return sqlite3.connect(DB_PATH, check_same_thread=False)
 
 def init_db():
@@ -110,7 +139,42 @@ def init_db():
     conn.commit()
     conn.close()
 
+# تشغيل تهيئة قاعدة البيانات مرة واحدة
 init_db()
+
+# ====================================================
+# ✳️ دوال مساعدة إضافية (QR + PDF)
+# ====================================================
+
+def gen_smart_id(rec_id):
+    today = datetime.utcnow().strftime("%Y%m%d")
+    return f"EOH-{today}-{rec_id:06d}"
+
+def generate_qr_bytes(data_str):
+    qr = qrcode.QRCode(box_size=6, border=2)
+    qr.add_data(data_str)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return buf
+
+def make_download_link_bytes(data_bytes, filename, label="Download"):
+    b64 = base64.b64encode(data_bytes).decode()
+    href = f'<a href="data:application/octet-stream;base64,{b64}" download="{filename}">{label}</a>'
+    return href
+
+def shape_arabic(text):
+    if not text:
+        return ""
+    try:
+        reshaped = arabic_reshaper.reshape(text)
+        bidi_text = get_display(reshaped)
+        return bidi_text
+    except Exception:
+        return text
+
 
 # ---------------- Utilities ----------------
 def gen_smart_id(rec_id):
@@ -610,4 +674,5 @@ elif page == "Admin":
         st.success("Demo data inserted. Refresh the page to see new records." if st.session_state.lang=="en" else "تم إضافة بيانات تجريبية. حدّث الصفحة لعرض السجلات.")
 
 # ------------- End -------------
+
 
