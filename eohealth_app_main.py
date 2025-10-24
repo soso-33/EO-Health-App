@@ -376,6 +376,37 @@ page = st.sidebar.radio(
         "Admin"
     ]
 )
+# ====================================================
+# 🧭 Sidebar Navigation
+# ====================================================
+
+st.sidebar.title("EoHealth Egypt Navigation")
+
+# اللغة
+if "lang" not in st.session_state:
+    st.session_state.lang = "ar"
+
+lang_choice = st.sidebar.selectbox(
+    "Language / اللغة",
+    ["ar", "en"],
+    format_func=lambda x: "العربية" if x == "ar" else "English"
+)
+st.session_state.lang = lang_choice
+
+# الصفحات المتاحة في التطبيق
+page = st.sidebar.radio(
+    "اختيار الصفحة / Choose Page",
+    [
+        "Home",
+        "Register Birth",
+        "Vaccination Tracker",
+        "Health Record",
+        "AI Insights",
+        "Eco Dashboard",
+        "Digital Card",
+        "Admin"
+    ]
+)
 
 # ====================================================
 # 🩺 Health Record Page
@@ -673,5 +704,6 @@ elif page == "Admin":
 
 # ------------- End of Application -------------
 st.success("🎉 Application loaded successfully — EoHealth Egypt Prototype Ready!")
+
 
 
