@@ -355,7 +355,8 @@ def create_birth_certificate_pdf(child_rec: dict, output_path: Path):
 # ====================================================
 # 🩺 Health Record Page
 # ====================================================
-elif page == "Health Record":
+if page == "Health Record":
+
     st.header(t("health_record"))
     df = fetch_children_df()
 
@@ -647,3 +648,4 @@ elif page == "Admin":
 
 # ------------- End of Application -------------
 st.success("🎉 Application loaded successfully — EoHealth Egypt Prototype Ready!")
+
