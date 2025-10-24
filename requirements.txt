@@ -1,0 +1,9 @@
+streamlit==1.27.0
+pandas
+pillow
+qrcode==7.4.2
+arabic-reshaper
+python-bidi
+plotly
+fpdf
+openpyxl
