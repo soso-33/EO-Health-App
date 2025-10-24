@@ -1,51 +1,75 @@
-# eohealth_app_main.py
-# EoHealth Egypt - Prototype application (Streamlit)
-# Updated: bilingual (AR/EN), RTL support, Arabic PDF certificate generation, demo data insertion,
-# improved DB handling, caching, Digital Health Card, Excel import/export
-
 import streamlit as st
-import sqlite3, os, io, base64, sys
 import pandas as pd
 import qrcode
-from PIL import Image, ImageDraw, ImageFont
-from datetime import date, datetime
-from pathlib import Path
-import arabic_reshaper
-from bidi.algorithm import get_display
+from io import BytesIO
 
-# ------------- Config -------------
-st.set_page_config(page_title="EoHealth Egypt", layout="wide", initial_sidebar_state="expanded")
-DB_PATH = "eohealth_main.db"
-UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
-FONTS_DIR = Path("fonts")
-FONTS_DIR.mkdir(exist_ok=True)
+st.title("🧒 واجهة المستخدم - خدمات الكارت الموحد للطفل")
 
-# Try to find Amiri or fallback to DejaVuSans (cross-platform)
-AMIRI_PATH = FONTS_DIR / "Amiri-Regular.ttf"
-# common linux path
-DEJAVU_LINUX = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
-# common windows local fonts path fallback (user may place DejaVu here)
-DEJAVU_WINDOWS = Path.home() / "AppData" / "Local" / "Microsoft" / "Windows" / "Fonts" / "DejaVuSans.ttf"
-# if not found, set None
-if DEJAVU_LINUX.exists():
-    DEJAVU_PATH = DEJAVU_LINUX
-elif DEJAVU_WINDOWS.exists():
-    DEJAVU_PATH = DEJAVU_WINDOWS
+# الخطوة 1: إدخال أو رفع QR Code
+st.subheader("🔍 مسح الكود أو إدخال رقم الكارت الذكي")
+qr_code = st.text_input("أدخل رقم الكارت أو امسح QR Code:")
+
+if qr_code:
+    # الخطوة 2: عرض بيانات الطفل (افتراضية للتجريب)
+    child_data = {
+        "الاسم": "محمد أحمد علي",
+        "تاريخ الميلاد": "2024-03-12",
+        "الرقم القومي": "30210142301124",
+        "المنطقة الصحية": "شمال الجيزة",
+        "الحالة الصحية": "جيدة"
+    }
+    st.success("✅ تم قراءة بيانات الطفل بنجاح")
+    st.table(pd.DataFrame([child_data]))
+
+    # الخطوة 3: اختيار الخدمة
+    st.subheader("🎯 اختر الخدمة المطلوبة:")
+    service = st.selectbox(
+        "الخدمات المتاحة:",
+        ["اختيار...", "تسجيل مولود جديد", "حجز تطعيم", "حجز كشف طبي", "استخراج شهادة ميلاد", "شكاوى ومقترحات", "استفسار عن الخدمات"]
+    )
+
+    # الخطوة 4: النماذج التفاعلية
+    if service == "تسجيل مولود جديد":
+        st.text_input("اسم المولود")
+        st.date_input("تاريخ الميلاد")
+        st.file_uploader("تحميل شهادة الميلاد من المستشفى")
+        if st.button("تأكيد التسجيل"):
+            st.success("✅ تم تسجيل المولود بنجاح")
+
+    elif service == "حجز تطعيم":
+        vaccine = st.selectbox("اختيار نوع التطعيم:", ["الدرن", "شلل الأطفال", "الثلاثي", "الكبد"])
+        date = st.date_input("تاريخ الموعد المطلوب")
+        if st.button("تأكيد الحجز"):
+            st.success(f"💉 تم حجز تطعيم ({vaccine}) بتاريخ {date}")
+
+    elif service == "حجز كشف طبي":
+        dept = st.selectbox("اختيار العيادة:", ["الأطفال", "الأسنان", "الأنف والأذن", "باطنة"])
+        date = st.date_input("تاريخ الموعد")
+        if st.button("تأكيد الحجز"):
+            st.success(f"🏥 تم حجز الكشف في عيادة {dept} بتاريخ {date}")
+
+    elif service == "استخراج شهادة ميلاد":
+        st.text_input("الرقم القومي لولي الأمر")
+        st.text_input("رقم ملف الطفل")
+        if st.button("طلب استخراج الشهادة"):
+            st.success("📜 تم تقديم الطلب بنجاح – رقم الطلب: #BIRTH-2025-001")
+
+    elif service == "شكاوى ومقترحات":
+        st.text_area("اكتب الشكوى أو المقترح")
+        if st.button("إرسال"):
+            st.success("📬 تم إرسال الشكوى بنجاح، وسيتم الرد خلال 48 ساعة")
+
+    elif service == "استفسار عن الخدمات":
+        st.write("""
+        🍼 تسجيل مولود جديد  
+        💉 حجز التطعيمات  
+        🏥 الكشف الطبي  
+        📜 استخراج الشهادات  
+        💬 تقديم الشكاوى
+        """)
+
 else:
-    DEJAVU_PATH = None
-
-def choose_font(size=24):
-    # Prefers Amiri if present, else DejaVu if available, else default pillow font
-    try:
-        if AMIRI_PATH.exists():
-            return ImageFont.truetype(str(AMIRI_PATH), size=size)
-        elif DEJAVU_PATH and Path(DEJAVU_PATH).exists():
-            return ImageFont.truetype(str(DEJAVU_PATH), size=size)
-        else:
-            return ImageFont.load_default()
-    except Exception:
-        return ImageFont.load_default()
+    st.info("📷 برجاء إدخال أو مسح كود الكارت الذكي لبدء الخدمة.")
 
 # ------------- DB Utilities -------------
 def get_conn():
@@ -586,3 +610,4 @@ elif page == "Admin":
         st.success("Demo data inserted. Refresh the page to see new records." if st.session_state.lang=="en" else "تم إضافة بيانات تجريبية. حدّث الصفحة لعرض السجلات.")
 
 # ------------- End -------------
+
